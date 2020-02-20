@@ -1,5 +1,21 @@
-/*GENERATED Thu Feb 20 2020 19:09:20 GMT+0100 (Central European Standard Time)*/
-/*BEGIN:www/tapp.static/tapp.src.js*/
+/*GENERATED Thu Feb 20 2020 19:34:49 GMT+0100 (Central European Standard Time)*/
+/*BEGIN:www/tapp.static/tapp.opt.src.js*/
+/*
+
+MAJOR BREAKING CHANGES:
+
+> tapp-<ANYTHING> is not t-<ANYTHING> - in stylesheets, html attributes, etc
+
+> t-html REPLACES t-eval
+
+> t-attribute always now evaluates in the context of C.ctx (previously was erraycally usually C, sometimes C.ctx),
+
+e.g. instead of:
+    tapp-data-src="ctx.imgs[ctx.feat].src"
+do
+    t-data-src="imgs[feat].src"
+
+*/
 window._fnraws=[];
 Object.prototype.shimQSA=function(sel,dbug){
     if(typeof this.querySelectorAll != 'function') return alert('Not a DOM node / QSA missing!');
@@ -38,8 +54,8 @@ function tapp(el, componentID, crumb){
 tapp.prototype.refreshComponents = function(host,andboot,onfly){
     var C=this;
     if(!host._comps){
-        if(host.innerHTML.indexOf('tapp-component')<0)return host._comps=[];
-        host._comps=host.shimQSA('[tapp-component]',C.crumb);
+        if(host.innerHTML.indexOf('t-component')<0)return host._comps=[];
+        host._comps=host.shimQSA('[t-component]',C.crumb);
         //console.log('refreshComponents found',C.el._comps.length,'DOM nodes for',C.crumb);
     }
     if(andboot){
@@ -52,7 +68,7 @@ tapp.prototype._instantiateComponent = (divC,parent/*used during eval*/,hostel)=
     var C=this;//.root||this; 
     if(divC.tapp) return divC.tapp.render();
     //console.log('Instantiating component',divC.className,divC.innerText)
-    //divC.removeAttribute('tapp-component');
+    //divC.removeAttribute('t-component');
     var cid;
     Object.keys(tapp.templates).forEach(ci=>{
         if(divC.classList.contains(ci))cid=ci;
@@ -60,7 +76,7 @@ tapp.prototype._instantiateComponent = (divC,parent/*used during eval*/,hostel)=
     if(!cid)return console.log(divC.className,' is not a registered component class:');
 
     var O, el=divC;
-    var init=divC.getAttribute('tapp-init')||divC.innerText;
+    var init=divC.getAttribute('t-init')||divC.innerText;
     //console.log(divC.className+':'+init,el.outerHTML);
     
     with(parent.ctx){
@@ -107,7 +123,7 @@ tapp.prototype.create=function(O,root){
 }
 
 tapp.prototype.expand=function(){
-    const skipattr='tapp tapp-component tapp-eval tapp-boot tapp-init'.split(' ');
+    const skipattr='tapp t-component t-eval t-evalto t-html t-for t-implements t-boot t-init'.split(' ');
 
     var C=this; var el=C.el;
     //C._fnall.splice(0);
@@ -119,16 +135,16 @@ tapp.prototype.expand=function(){
     function doExpand(L){
         // re-axpansion NOT IMPLEMENTED
         // if we re-expanding, must first destroy all inner codes, templates etc!
-        // instead, throw down instances of tapp-for blocks, from with code blocks
+        // instead, throw down instances of t-for blocks, from with code blocks
 
-        var arr=L.getAttribute('tapp-for').split(':');
+        var arr=L.getAttribute('t-for').split(':');
         var key=arr[0];
         with(C.ctx){arr=Array.from(eval(arr[1]))}
         
 
-        L.removeAttribute('tapp-for');
+        L.removeAttribute('t-for');
         L.setAttribute('tapp','');
-        L.classList.add('tapp-exp');
+        L.classList.add('t-exp');
         
         var tmpl = (L.outerHTML).split(':'+key+':');
         
@@ -142,34 +158,35 @@ tapp.prototype.expand=function(){
         
     }
     function expNext(){
-        var L=document.querySelector('[tapp-for]')
+        var L=document.querySelector('[t-for]')
         if(!L)return;//console.log('Exited an expansion loop');
         doExpand(L);
         expNext();
     }
     expNext();
     
-    //el.shimQSA('[tapp-for]',C.crumb).forEach(doExpand);
+    //el.shimQSA('[t-for]',C.crumb).forEach(doExpand);
 
-    el.shimQSA('[tapp-evalto]',C.crumb).forEach(E=>{
-        var tag=E.getAttribute('tapp-evalto');
-        E.outerHTML=`<${tag} tapp-eval>${ E.getAttribute('tapp-eval')||E.innerText }</${tag}>`;
+    el.shimQSA('[t-evalto]',C.crumb).forEach(E=>{
+        var tag=E.getAttribute('t-evalto');
+        E.outerHTML=`<${tag} t-html>${ E.getAttribute('t-html')||E.innerText }</${tag}>`;
     });
 
     el.shimQSA('code',C.crumb).forEach(E=>{
-        E.outerHTML=`<span tapp-eval>${ E.getAttribute('tapp-eval')||E.innerText }</span>`;
+        // <code>fn()</code> is simply shorthand for <span t-html="fn()"></span> pt <span t-html>fn()</span>
+        E.outerHTML=`<span t-html>${ E.getAttribute('t-html')||E.innerText }</span>`;
     });
 
-    el.shimQSA('[tapp-eval]',C.crumb).forEach(E=>{
+    el.shimQSA('[t-eval],[t-html]',C.crumb).forEach(E=>{
         E.tapp=C;
         
         
 
-        E._evalRaw= E.getAttribute('tapp-eval')||E.innerText;
-        E.setAttribute('tapp-eval','');
+        E._evalRaw= E.getAttribute('t-eval')||E.getAttribute('t-html')||E.innerText;
+        E.setAttribute('t-eval','');E.setAttribute('t-html','');
         //alert(E._evalRaw);
         C.ctx.Components=tapp.components;
-        E.fnHTML=((debugWrap(E._evalRaw,C.crumb+':CODE'))).bind(C.ctx);
+        E.fnHTML=((debugWrap(E._evalRaw,C.crumb+':HTML'))).bind(C.ctx);
         E.fnInner=function(){
             var h=E.fnHTML();
             //if(typeof Mustache!='undefined')h=Mustache.render(h,C.ctx);
@@ -191,7 +208,7 @@ tapp.prototype.expand=function(){
     });
 
     //console.log('C._inners',C._inners);
-    el.shimQSA('[tapp],[tapp-eval],[tapp-class],[tapp-style],[tapp-component]',C.crumb).forEach(E=>{
+    el.shimQSA('[tapp],[t-eval],[t-html],[t-class],[t-style],[t-component]',C.crumb).forEach(E=>{
         if(!E.ctx){
             // allows native onclick to work with the data and trigger refreshes:
             E.ctx=C.ctx;
@@ -200,20 +217,20 @@ tapp.prototype.expand=function(){
             
         }
         E._fnall=[];
-        if(E.getAttribute('tapp-class')&&!E.fnClass){
-            E._classRaw=E.getAttribute('tapp-class');
-            E.removeAttribute('tapp-class');
+        if(E.getAttribute('t-class')&&!E.fnClass){
+            E._classRaw=E.getAttribute('t-class');
+            E.removeAttribute('t-class');
             E._basClass=E.className;
-            E._fnClass=(debugWrap(E._classRaw,C.crumb+':CLASS')).bind(C);
+            E._fnClass=(debugWrap(E._classRaw,C.crumb+':CLASS')).bind(C.ctx);
             E.fnClass=function(){E.className=E._basClass+' '+E._fnClass();}
             C._attrs.push(E.fnClass);
             E._fnall.push(E.fnClass);
         }
-        if(E.getAttribute('tapp-style')&&!E.fnStyle){
-            E._styleRaw=E.getAttribute('tapp-style');
-            E.removeAttribute('tapp-style');
+        if(E.getAttribute('t-style')&&!E.fnStyle){
+            E._styleRaw=E.getAttribute('t-style');
+            E.removeAttribute('t-style');
             E._basStyle=E.style.cssText;
-            E._fnStyle=(debugWrap(E._styleRaw,C.crumb+':STYLE')).bind(C);
+            E._fnStyle=(debugWrap(E._styleRaw,C.crumb+':STYLE')).bind(C.ctx);
             E.fnStyle=function(){E.style.cssText=E._basStyle+';'+E._fnStyle();}
             C._attrs.push(E.fnStyle);
             E._fnall.push(E.fnStyle);
@@ -223,12 +240,12 @@ tapp.prototype.expand=function(){
             .filter(a =>
                         a.specified
                         && (skipattr.indexOf(a.nodeName)<0)
-                        && a.nodeName.startsWith('tapp-')
+                        && a.nodeName.startsWith('t-')
             )
             .forEach(a=>{
                 var aRaw=E.getAttribute(a.nodeName), attr=a.nodeName.slice(a.nodeName.indexOf('-')+1);
                 E.removeAttribute(a.nodeName);
-                let f=(debugWrap(aRaw,C.crumb+':'+attr)).bind(C);
+                let f=(debugWrap(aRaw,C.crumb+':'+attr)).bind(C.ctx);
                 let F=function(){E.setAttribute(attr,f());}
                 C._attrs.push(F);
                 E._fnall.push(F);
@@ -311,102 +328,131 @@ tapp.prototype.removeChild=function(C){
 tapp.on={};
 tapp.templates={};
 tapp.fetches=0;
-tapp.registerComponents=function(){
+tapp._fetched={};
 
-    function includeHTML() {
-        var z, i, elmnt, file, xhttp;
-        /* Loop through a collection of all HTML elements: */
-        z = document.getElementsByTagName("*");
-        for (i = 0; i < z.length; i++) {
-            elmnt = z[i];
-            /*search for elements with a certain atrribute:*/
-            file = elmnt.getAttribute("tapp-include-html");
+const phold='<!--COMPONENT HAS NOT LOADED-->';
+
+function includeHTML(then) {
+    let file, xhttp, whichc;
+    var h0=document.getElementsByTagName("head")[0];
+    document.shimQSA('[t-include-html]').forEach(elmnt=>{
+        /*search for elements with a certain atrribute:*/
+        file = elmnt.getAttribute("t-include-html");
+        elmnt.removeAttribute("t-include-html");
+        if(!file)return;
+        
+        whichc=elmnt.getAttribute('t-implements');
+        if(whichc&&!!tapp.templates[whichc])return console.log('Ignoring include-html',file,'- component',whichc,'already loading or defined');
+        if(whichc)tapp.templates[whichc]=phold;
+        
+        if (file) {
+            /* Make an HTTP request using the attribute value as the file name: */
+            tapp.fetches++;
             
-            if (file) {
-                /* Make an HTTP request using the attribute value as the file name: */
-                tapp.fetches++;
-                xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = function() {
-                    if (this.readyState == 4) {
-                        tapp.fetches--;
-                        if (this.status == 200) {
-                            elmnt.innerHTML = this.responseText;
-
-                            var h0=document.getElementsByTagName("head")[0];
-                            
-                            elmnt.shimQSA('script','includeHTML').forEach(S=>{
-                                if (S.src != "") {
-                                    var tag = document.createElement("script");
-                                    tag.src = S.src;
-                                    h0.appendChild(tag);
-                                } else {
-                                    try{
-                                        eval(S.innerHTML);
-                                        //
-                                    }catch(e){
-                                        
-                                        console.error(e);
-                                    }
-                                }
-                            });
-
-                            /*
-                            elmnt.shimQSA('style','includeHTML').forEach(S=>{
-                                var tag = document.createElement("style");
+            xhttp = new XMLHttpRequest();
+            
+            console.log('tapp:XHR fetching',file);
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4) {
+                    tapp.fetches--;
+                    if (this.status == 200) {
+                        elmnt.setAttribute("t-included",file)
+                        elmnt.innerHTML = this.responseText;
+                        elmnt.shimQSA('script','includeHTML').forEach(S=>{
+                            if (S.src != "") {
+                                var tag = document.createElement("script");
+                                tag.src = S.src;
                                 h0.appendChild(tag);
-                                tag.innerHTML=S.innerHTML;
-                                alert('tapp-include-html inserted a style block from '+file);
-                            });
-                            */
-
-                            //alert('Loaded & processed '+file);
-                            
-                            
-                        }
-                        if (this.status == 404) {elmnt.innerHTML = "<b>tapp-include-html</b><br /><br />404 not found: <pre>"+file+"</pre>";}
-                        /* Remove the attribute, and call this function once more: */
-                        elmnt.removeAttribute("tapp-include-html");
-                        elmnt.setAttribute("tapp-included",file)
-                        tapp.registerComponents();
-                        //includeHTML();
-                        if(tapp.fetches==0 && window.loaded)tapp.isReady();
+                            } else {
+                                try{
+                                    eval(S.innerHTML);
+                                    //
+                                }catch(e){
+                                    
+                                    console.error(e);
+                                }
+                            }
+                        });
+                        /*
+                        elmnt.shimQSA('style','includeHTML').forEach(S=>{
+                            var tag = document.createElement("style");
+                            h0.appendChild(tag);
+                            tag.innerHTML=S.innerHTML;
+                            alert('t-include-html inserted a style block from '+file);
+                        });
+                        */
+                        //alert('Loaded & processed '+file);                         
+                    } else {
+                        elmnt.setAttribute("t-include-failed",file+':'+this.status)
+                    }
+                    if (this.status == 404) {elmnt.innerHTML = "<b>t-include-html</b><br /><br />404 not found: <pre>"+file+"</pre>";}
+                    /* Remove the attribute, and call this function once more: */
+                    elmnt.setAttribute("t-included",file)
+                    
+                    if(tapp.fetches==0){
+                        console.log('All XHR requests done (for now)');
+                        then(true);// DOES WAITING TIL ALL FETCEHS DONE CAUSE A RACE CONDITION?!?!?
                     }
                 }
-                xhttp.open("GET", file, true);
-                //setTimeout(function(){
-                    xhttp.send();
-                    //
-                //},1)
-                
-                /* Exit the function: */
-                return;
             }
+            xhttp.open("GET", file, true);
+            //setTimeout(function(){
+                xhttp.send();
+                //
+            //},1)
+            
+            /* Exit the function: */
+            return;
         }
-    }
-    includeHTML();
+    });
 
-    document.shimQSA('template.tapp-template,template[tapp-template]','registerComponents').forEach(T=>{
-        if(!T.id)T.id=T.getAttribute('tapp-template');
+    if(tapp.fetches==0){
+        console.log('No XHR requests needed (for now)');
+        then();
+    }
+}
+
+function doRegister(){
+    document.shimQSA('template.t-template,template[t-template]','registerComponents').forEach(T=>{
+        if(T.innerHTML==phold)return console.log('Tried to register a component without letting it load first!',T)
+        if(!T.id)T.id=T.getAttribute('t-template');
         if(!T.id){
             
             return;
         }
-        if(tapp.templates[T.id])return;//console.log('Updating defintion of',T.id)
+        if(tapp.templates[T.id] && tapp.templates[T.id]!=phold)return;//console.log('Updating definition of',T.id)
         tapp.templates[T.id]=T.innerHTML;
         tapp.components=tapp.components||{};
         tapp.components[T.id]=function(O){
-            return `<div tapp-component class="${T.id}">${JSON.stringify(O)}</div>`
+            return `<div t-component class="${T.id}">${JSON.stringify(O)}</div>`
         }
         tapp.components[T.id].all=function(A){
             return A.map(e=>tapp.components[T.id](e)).join('\n')
         }
         //
+        
+        //alert('yo');
     });
+}
 
-    return tapp;
+tapp.registerComponents=function(then){
+    function iterate(){
+        doRegister();
+        includeHTML(function(repeat){
+            
+            if(repeat){
+                
+                return iterate();
+            }
+            //if(!tapp._firstboot){ tapp._firstboot=1; tapp.isReady(); }
+            if(typeof then=='function')then();
+        });
+        
+    }
+    iterate();
 }
 tapp.boot=function(el,O){
-    //console.log('tapp.boot',el);
+    
     if(typeof el=='string')el=document.querySelector(el);
     if(!el.tapp){
         
@@ -418,28 +464,31 @@ tapp.boot=function(el,O){
     
     return el.tapp;
 }
+
 tapp._onready=[];
 tapp.onready=function(F){ tapp._onready.push(F); }
 tapp.isReady=function(){ tapp._onready.forEach(F=>F()); }
-window.onload=function(){
-    window.loaded=true;
-    if(!tapp.fetches)tapp.isReady();
-    
+tapp._regOK=function(){
+    //
+    if(document.readyState=='complete')return tapp.isReady();
+    //
+    window.onload=tapp.isReady;
+}
+if(document.readyState == "loading") {
+    window.addEventListener('DOMContentLoaded',()=>tapp.registerComponents(tapp._regOK))
+    //
+} else {
+    tapp.registerComponents(tapp._regOK);
 }
 
-if(document.readyState != "loading")
-    tapp.registerComponents();
-else
-    window.addEventListener('DOMContentLoaded',tapp.registerComponents);
-
 tapp.onready(function(){
-    document.shimQSA('[tapp-boot]').forEach(el=>{
-        var o={}, boot=el.getAttribute('tapp-boot');
-        if(boot)try{eval("o="+boot)}catch(e){console.error('tapp-boot invalid config:', e)}
+    document.shimQSA('[t-boot]').forEach(el=>{
+        var o={}, boot=el.getAttribute('t-boot');
+        if(boot)try{eval("o="+boot)}catch(e){console.error('t-boot invalid config:', e)}
         tapp.boot(el,o);
         
     });
 });
 
 /* https://github.com/john-doherty/swiped-events/blob/master/src/swiped-events.js */
-!function(t,e){"use strict";"function"!=typeof t.CustomEvent&&(t.CustomEvent=function(t,n){n=n||{bubbles:!1,cancelable:!1,detail:void 0};var u=e.createEvent("CustomEvent");return u.initCustomEvent(t,n.bubbles,n.cancelable,n.detail),u},t.CustomEvent.prototype=t.Event.prototype),e.addEventListener("touchstart",function(t){if("true"===t.target.getAttribute("data-swipe-ignore"))return;o=t.target,l=Date.now(),n=t.touches[0].clientX,u=t.touches[0].clientY,a=0,i=0},!1),e.addEventListener("touchmove",function(t){if(!n||!u)return;var e=t.touches[0].clientX,l=t.touches[0].clientY;a=n-e,i=u-l},!1),e.addEventListener("touchend",function(t){if(o!==t.target)return;var e=parseInt(o.getAttribute("data-swipe-threshold")||"20",10),s=parseInt(o.getAttribute("data-swipe-timeout")||"500",10),r=Date.now()-l,c="";Math.abs(a)>Math.abs(i)?Math.abs(a)>e&&r<s&&(c=a>0?"swiped-left":"swiped-right"):Math.abs(i)>e&&r<s&&(c=i>0?"swiped-up":"swiped-down");""!==c&&o.dispatchEvent(new CustomEvent(c,{bubbles:!0,cancelable:!0}));n=null,u=null,l=null},!1);var n=null,u=null,a=null,i=null,l=null,o=null}(window,document);/*END:www/tapp.static/tapp.src.js*/
+!function(t,e){"use strict";"function"!=typeof t.CustomEvent&&(t.CustomEvent=function(t,n){n=n||{bubbles:!1,cancelable:!1,detail:void 0};var u=e.createEvent("CustomEvent");return u.initCustomEvent(t,n.bubbles,n.cancelable,n.detail),u},t.CustomEvent.prototype=t.Event.prototype),e.addEventListener("touchstart",function(t){if("true"===t.target.getAttribute("data-swipe-ignore"))return;o=t.target,l=Date.now(),n=t.touches[0].clientX,u=t.touches[0].clientY,a=0,i=0},!1),e.addEventListener("touchmove",function(t){if(!n||!u)return;var e=t.touches[0].clientX,l=t.touches[0].clientY;a=n-e,i=u-l},!1),e.addEventListener("touchend",function(t){if(o!==t.target)return;var e=parseInt(o.getAttribute("data-swipe-threshold")||"20",10),s=parseInt(o.getAttribute("data-swipe-timeout")||"500",10),r=Date.now()-l,c="";Math.abs(a)>Math.abs(i)?Math.abs(a)>e&&r<s&&(c=a>0?"swiped-left":"swiped-right"):Math.abs(i)>e&&r<s&&(c=i>0?"swiped-up":"swiped-down");""!==c&&o.dispatchEvent(new CustomEvent(c,{bubbles:!0,cancelable:!0}));n=null,u=null,l=null},!1);var n=null,u=null,a=null,i=null,l=null,o=null}(window,document);/*END:www/tapp.static/tapp.opt.src.js*/
