@@ -6,13 +6,12 @@ function dolazi(loadingPixel){
             entries.forEach((entry) => {
                 if(entry.isIntersecting || entry.intersectionRatio >= 0.01){
                     var L=entry.target;
-                    if( L.dataset.src && (autoRetry||L.src!=L.dataset.src) ){
+                    if(
+                        L.classList.contains("load")
+                        && L.dataset.src
+                        && L.src!=L.dataset.src
+                    ){
                         L.src=L.dataset.src;
-                        L.onload=function(){
-                            L.classList.remove('load');
-                            L.removeAttribute('data-src');
-                            L.lazd=1;
-                        }
                     }
                 }
             });
@@ -24,13 +23,20 @@ function dolazi(loadingPixel){
     }
 
     let lazi=document.querySelectorAll('img[data-src]');
-    //var lc=0;
     lazi.forEach(L=>{
         if(L.lazd)return;
-        if(L.classList.contains('load'))return;
-        x._observer.observe(L);
+        L.lazd=1; x._observer.observe(L);
         L.classList.add('load');
+        L.onload=function(){
+            if(L.src==loadingPixel)return;
+            L.classList.remove('load');
+            L.removeAttribute('data-src');
+        }
+        L.onerror=function(){
+            if(L.src==loadingPixel)return;
+            if(!autoRetry)L.classList.remove('load');
+            L.src=loadingPixel;
+        }
         L.src=loadingPixel;
-        //lc++;
     });
 }
