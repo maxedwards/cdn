@@ -37,6 +37,6 @@ function dolazi(loadingPixel){
             if(!autoRetry)L.classList.remove('load');
             L.src=loadingPixel;
         }
-        L.src=loadingPixel;
+        setTimeout(function(){L.src=loadingPixel;},1);
     });
 }
