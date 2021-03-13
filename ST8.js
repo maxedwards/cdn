@@ -17,16 +17,18 @@
             }
             return S;
         },
-        set:(name,val,flat)=>{
+        set:(name,val,init,flat)=>{
             if(name.constructor===Object && (typeof val=='undefined') && !flat) {
-                Object.keys(name).forEach(k=>S.set(k,name[k],1));
+                Object.keys(name).forEach(k=>S.set(k,name[k],init,1));
                 return S;
             }
+            if(init&&typeof S.V[name]!='undefined')return S;
             if(S.V[name]===val)return S;
             S.V[name]=val;
             if(S.F[name])S.F[name].forEach(F=>F.call(S,val));
             return S;
         },
+        init:(name,val)=>S.set(name,val,1),
         save:x=>{localStorage.ST8V=JSON.stringify(S.V);return S;},
         draw:x=>(
                     Object.keys(S.F)
