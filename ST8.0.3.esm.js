@@ -1,8 +1,10 @@
+let _ST8=window._ST8;
+if(!_ST8){_ST8=window._ST8={}; console.log('_ST8 created');}
+
 function ST8(id){
-    if(!window._ST8){window._ST8={}; console.log('window._ST8 created');}
-    let S=window._ST8[id];
+    let S=_ST8[id];
     if(typeof S!='object'){
-        S=window._ST8[id]={
+        S=_ST8[id]={
             V:{},
             F:{},
             sub:(name,F,flat)=>{ // returns a single ready to execute unsub function for both single and compound subs
@@ -17,12 +19,19 @@ function ST8(id){
                 if(S.V[name])F(S.V[name]);
                 return ()=>S.unsub(name,F);
             },
+            val:name=>S.V&&S.V[name],
+            vals:arrNames=>{
+                let r={};
+                if(S.V)arrNames.forEach(n=>S.V[n]&&(r[n]=S.V[n]));
+                return r;
+            },
             unsub:(name,F)=>{ // ok to call it multiple times, won't error. Returns main ST8 library.
                 if(S.F&&S.F[name]){
                     let i=S.F[name].indexOf(F);
                     if(i>=0){
                         S.F[name].splice(i,1);
-                        console.log(`ST8("${id}") unsubscribed`,F,'from',name);
+                        //console.log(`ST8("${id}") unsubscribed`,F,'from',name);
+                        if(S.F[name].length==0)delete S.F[name];
                     }
                 }
                 return S;
@@ -51,14 +60,28 @@ function ST8(id){
             load:x=>( console.log(`ST8("${id}").load()`), localStorage["ST8V"+id] ? (S.V=JSON.parse(localStorage["ST8V"+id]), S._run()) : S ),
             wipe:x=>( delete localStorage["ST8V"+id], S.V={}, S._run() )
         };
-        console.log('window._ST8.',id,' created');
+        console.log('_ST8.',id,' created');
         //S.load();
-    } //else console.log('window._ST8.',id,' reused');
+    } //else console.log('_ST8.',id,' reused');
     return S;
 }
 if(typeof window.ST8!='function')window.ST8=ST8;
 export default ST8;
 
+ST8.stat=()=>Object.keys(_ST8||{}).forEach(s=>{
+        let S=_ST8[s];
+        console.log(
+            'ST8(',s,').V:<br />',
+            S.V,
+            '\nsubs:',
+            Object.keys(S.F).map(n=>`\n${n}: ${S.F[n].length}`).join(''),
+            '\nTot:',
+            Object.keys(S.F).reduce((tot,n)=>tot+S.F[n].length,0),
+        )
+    }
+);
+
+// usage e.g. st8bind("ST8.store1.val1",v=>val1=v);
 const st8bind=(val,sub)=>{
     if(typeof val=='string' && val.startsWith('ST8.')){
         let parts=val.split('.');
